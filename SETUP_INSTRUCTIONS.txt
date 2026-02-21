@@ -1,0 +1,32 @@
+INSTRUKCJA UZUPEŁNIENIA gradle-wrapper.jar
+==========================================
+
+Plik gradle/wrapper/gradle-wrapper.jar jest wymagany do budowania projektu,
+ale jest binarny i nie może być wygenerowany tekstowo.
+
+KROK 1 — Pobierz jar jedną z tych metod:
+
+  Metoda A (najłatwiejsza) — przez Android Studio:
+    1. Otwórz projekt w Android Studio
+    2. Studio automatycznie wykryje brakujący wrapper i zaproponuje jego pobranie
+    3. Kliknij "OK" / "Download" — plik zostanie dodany automatycznie
+
+  Metoda B — przez wiersz poleceń (jeśli masz zainstalowany Gradle globalnie):
+    cd StreamSleep
+    gradle wrapper --gradle-version 8.4
+
+  Metoda C — pobierz ręcznie:
+    https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
+    Zapisz jako: gradle/wrapper/gradle-wrapper.jar
+
+KROK 2 — Wgraj na GitHub:
+    git init
+    git add .
+    git commit -m "Initial commit: StreamSleep app"
+    git branch -M main
+    git remote add origin https://github.com/TWOJ_LOGIN/StreamSleep.git
+    git push -u origin main
+
+KROK 3 — GitHub automatycznie uruchomi Actions i zbuduje APK.
+  Znajdziesz go w: GitHub → Twoje repo → Actions → Build StreamSleep APK → Artifacts
+  Lub jako Release (jeśli push był na gałąź main).

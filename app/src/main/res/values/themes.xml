@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#4A4AFF</item>
+        <item name="colorPrimaryDark">#1A1A2E</item>
+        <item name="colorAccent">#7070FF</item>
+        <item name="android:windowBackground">#1A1A2E</item>
+        <item name="android:textColorPrimary">#E0E0FF</item>
+        <item name="android:textColorSecondary">#9090BB</item>
+        <item name="spinnerStyle">@style/SpinnerStyle</item>
+    </style>
+
+    <style name="SpinnerStyle" parent="Widget.AppCompat.Spinner">
+        <item name="android:backgroundTint">#4444AA</item>
+        <item name="android:colorControlNormal">#4444AA</item>
+    </style>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">StreamSleep</string>
+    <string name="accessibility_description">StreamSleep używa usług ułatwień dostępu do automatycznego zamykania aplikacji streamingowych i blokowania ekranu po upływie ustawionego czasu.</string>
+</resources>

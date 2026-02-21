@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1A1A2E"
+    android:padding="24dp">
+
+    <!-- Logo / Tytuł -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingTop="32dp"
+        android:paddingBottom="40dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🌙"
+            android:textSize="52sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="StreamSleep"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#E0E0FF"
+            android:letterSpacing="0.05" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Timer wyłączania aplikacji streamingowych"
+            android:textSize="12sp"
+            android:textColor="#9090BB"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
+
+    <!-- Karta wyboru aplikacji -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="APLIKACJA"
+        android:textSize="11sp"
+        android:textColor="#7070AA"
+        android:letterSpacing="0.12"
+        android:layout_marginBottom="8dp" />
+
+    <Spinner
+        android:id="@+id/spinnerApp"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@drawable/spinner_bg"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:popupBackground="#2A2A4E"
+        android:dropDownWidth="match_parent" />
+
+    <!-- Wybór czasu -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="CZAS DO WYŁĄCZENIA"
+        android:textSize="11sp"
+        android:textColor="#7070AA"
+        android:letterSpacing="0.12"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="8dp" />
+
+    <Spinner
+        android:id="@+id/spinnerTime"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@drawable/spinner_bg"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:popupBackground="#2A2A4E"
+        android:dropDownWidth="match_parent" />
+
+    <!-- Status -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Wybierz aplikację i czas"
+        android:textSize="13sp"
+        android:textColor="#9090CC"
+        android:gravity="center"
+        android:layout_marginTop="28dp"
+        android:minHeight="40dp" />
+
+    <!-- Spacer -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Przyciski -->
+    <Button
+        android:id="@+id/btnStart"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="▶  URUCHOM TIMER"
+        android:textSize="15sp"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#4A4AFF"
+        android:layout_marginBottom="12dp"
+        android:stateListAnimator="@null" />
+
+    <Button
+        android:id="@+id/btnStop"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="⏹  ZATRZYMAJ"
+        android:textSize="14sp"
+        android:textColor="#CCCCCC"
+        android:backgroundTint="#333355"
+        android:enabled="false"
+        android:stateListAnimator="@null"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Informacja o wymaganiach -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="ℹ️ Wymagane: Usługi ułatwień dostępu + Wyświetlanie na wierzchu"
+        android:textSize="10sp"
+        android:textColor="#555577"
+        android:gravity="center"
+        android:layout_marginBottom="8dp" />
+
+</LinearLayout>

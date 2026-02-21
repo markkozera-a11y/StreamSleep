@@ -1,0 +1,77 @@
+name: Build StreamSleep APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:   # możliwość ręcznego uruchomienia z zakładki Actions
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Pobierz kod z repozytorium
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Ustaw Java 17 (wymagane przez Android Gradle Plugin 8.x)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      # 3. Ustaw Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # 4. Nadaj uprawnienia do wykonania Gradle Wrapper
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # 5. Zbuduj debug APK
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      # 6. Prześlij APK jako artefakt do pobrania
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreamSleep-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      # 7. (Opcjonalnie) Utwórz Release z APK przy każdym pushu na main
+      - name: Create Release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "StreamSleep v1.0 (build ${{ github.run_number }})"
+          body: |
+            ## StreamSleep APK
+
+            ### Instalacja na Samsung Galaxy S24 Ultra:
+            1. Pobierz plik `StreamSleep-debug.apk`
+            2. Prześlij na telefon (e-mail, Google Drive, kabel USB)
+            3. Na telefonie: **Ustawienia → Aplikacje → Specjalny dostęp → Instalowanie nieznanych aplikacji**
+               → włącz dla przeglądarki/menedżera plików
+            4. Otwórz APK i zainstaluj
+            5. Po instalacji włącz dwa uprawnienia:
+               - **Ułatwienia dostępu → StreamSleep → Włącz**
+               - **Aplikacje → StreamSleep → Wyświetlaj na wierzchu innych aplikacji**
+
+            ### Co nowego:
+            - Automatyczne zamykanie Netflix / Prime Video / Disney+
+            - Timer: 1, 15, 30, 45, 60 minut
+            - Nakładka z odliczaniem w prawym dolnym rogu
+            - Blokada ekranu po wygaśnięciu timera
+          files: app/build/outputs/apk/debug/app-debug.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

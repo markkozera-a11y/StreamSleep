@@ -1,10 +1,6 @@
 package com.streamsleep.app
 
 import android.accessibilityservice.AccessibilityService
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
 import android.util.Log

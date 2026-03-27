@@ -1,52 +1,119 @@
 package com.streamsleep.app
 
 import android.accessibilityservice.AccessibilityService
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 
 class AppCloseAccessibilityService : AccessibilityService() {
 
     companion object {
-        const val ACTION_CLOSE_APP = "com.streamsleep.CLOSE_APP"
-        const val ACTION_SLEEP_SCREEN = "com.streamsleep.SLEEP_SCREEN"
-        const val EXTRA_PACKAGE = "package_name"
-    }
+        private const val TAG = "StreamSleep"
+        private var instance: AppCloseAccessibilityService? = null
 
-    private val receiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                ACTION_CLOSE_APP -> {
-                    val pkg = intent.getStringExtra(EXTRA_PACKAGE)
-                    Log.d("StreamSleep", "Closing app: $pkg")
-                    // Naciśnij przycisk Home, następnie wyczyść z ostatnich
-                    performGlobalAction(GLOBAL_ACTION_HOME)
-                    performGlobalAction(GLOBAL_ACTION_RECENTS)
-                    // Krótkie opóźnienie, potem zamknij
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        // Wróć do Home - aplikacja zostanie minimalizowana i wyrzucona
-                        performGlobalAction(GLOBAL_ACTION_HOME)
-                    }, 800)
-                }
-                ACTION_SLEEP_SCREEN -> {
-                    Log.d("StreamSleep", "Locking screen")
-                    performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
-                }
-            }
+        fun closeAppAndSleep(packageName: String) {
+            instance?.doCloseAppAndSleep(packageName)
         }
     }
+
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        val filter = IntentFilter().apply {
-            addAction(ACTION_CLOSE_APP)
-            addAction(ACTION_SLEEP_SCREEN)
+        instance = this
+        Log.d(TAG, "AccessibilityService connected")
+    }
+
+    private fun doCloseAppAndSleep(packageName: String) {
+        Log.d(TAG, "Closing app and activating sleep mode: $packageName")
+
+        // 1. Wychodzimy z aplikacji streamingowej na Home
+        performGlobalAction(GLOBAL_ACTION_HOME)
+
+        // 2. Otwieramy Quick Settings i szukamy kafelka "Sen"
+        handler.postDelayed({
+            activateSamsungSleepMode()
+        }, 1000)
+    }
+
+    private fun activateSamsungSleepMode() {
+        Log.d(TAG, "Opening Quick Settings to find Sleep mode tile")
+        // Otwórz pełny panel Quick Settings (dwa razy = pełny panel)
+        performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+
+        handler.postDelayed({
+            val found = findAndClickSleepTile()
+            if (found) {
+                Log.d(TAG, "Sleep mode tile clicked!")
+                // Zamknij panel Quick Settings i zablokuj ekran
+                handler.postDelayed({
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                    handler.postDelayed({
+                        performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+                    }, 500)
+                }, 1500)
+            } else {
+                Log.d(TAG, "Sleep mode tile not found, trying expanded panel")
+                // Spróbuj rozwinąć panel (przeciągnij w dół jeszcze raz)
+                performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+                handler.postDelayed({
+                    val foundExpanded = findAndClickSleepTile()
+                    if (foundExpanded) {
+                        Log.d(TAG, "Sleep mode tile clicked in expanded panel!")
+                        handler.postDelayed({
+                            performGlobalAction(GLOBAL_ACTION_BACK)
+                            handler.postDelayed({
+                                performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+                            }, 500)
+                        }, 1500)
+                    } else {
+                        Log.d(TAG, "Sleep mode tile not found at all, just locking screen")
+                        // Fallback: zamknij panel i zablokuj ekran
+                        performGlobalAction(GLOBAL_ACTION_BACK)
+                        handler.postDelayed({
+                            performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+                        }, 500)
+                    }
+                }, 1200)
+            }
+        }, 1200)
+    }
+
+    private fun findAndClickSleepTile(): Boolean {
+        val rootNode = rootInActiveWindow ?: return false
+
+        // Szukaj kafelka po różnych wariantach nazwy (PL/EN)
+        val searchTerms = listOf("Sen", "Sleep", "Tryb Sen", "Sleep mode")
+        for (term in searchTerms) {
+            val nodes = rootNode.findAccessibilityNodeInfosByText(term)
+            if (nodes != null && nodes.isNotEmpty()) {
+                for (node in nodes) {
+                    Log.d(TAG, "Found node: '${node.text}', class: ${node.className}")
+                    // Kliknij sam node
+                    if (node.isClickable) {
+                        node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                        rootNode.recycle()
+                        return true
+                    }
+                    // Kliknij rodzica (kafelki QS często mają klikalnego rodzica)
+                    var parent = node.parent
+                    var depth = 0
+                    while (parent != null && depth < 5) {
+                        if (parent.isClickable) {
+                            parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                            rootNode.recycle()
+                            return true
+                        }
+                        parent = parent.parent
+                        depth++
+                    }
+                }
+            }
         }
-        registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        Log.d("StreamSleep", "AccessibilityService connected")
+        rootNode.recycle()
+        return false
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
@@ -55,6 +122,6 @@ class AppCloseAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        try { unregisterReceiver(receiver) } catch (e: Exception) {}
+        instance = null
     }
 }

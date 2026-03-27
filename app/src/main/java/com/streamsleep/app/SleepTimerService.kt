@@ -4,7 +4,6 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.os.*
-import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class SleepTimerService : Service() {
@@ -67,8 +66,8 @@ class SleepTimerService : Service() {
                 remainingSeconds = 0
                 overlayManager.hide()
                 closeStreamingApp(targetPackage)
-                turnOffScreen()
-                stopSelf()
+                // stopSelf po opóźnieniu, żeby AccessibilityService zdążył aktywować tryb Sen
+                Handler(Looper.getMainLooper()).postDelayed({ stopSelf() }, 8000)
             }
         }.start()
     }
@@ -82,19 +81,8 @@ class SleepTimerService : Service() {
     }
 
     private fun closeStreamingApp(packageName: String) {
-        // Wysyłamy broadcast do AccesibilityService aby zamknął aplikację
-        val intent = Intent(AppCloseAccessibilityService.ACTION_CLOSE_APP).apply {
-            putExtra(AppCloseAccessibilityService.EXTRA_PACKAGE, packageName)
-        }
-        sendBroadcast(intent)
-    }
-
-    private fun turnOffScreen() {
-        // Wymaga uprawnienia DEVICE_POWER lub AccessibilityService
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        // Tryb sleep przez AccessibilityService (Global Action)
-        val intent = Intent(AppCloseAccessibilityService.ACTION_SLEEP_SCREEN)
-        sendBroadcast(intent)
+        // Bezpośrednie wywołanie przez statyczną referencję do AccessibilityService
+        AppCloseAccessibilityService.closeAppAndSleep(packageName)
     }
 
     private fun buildNotification(appName: String, secondsLeft: Long): Notification {

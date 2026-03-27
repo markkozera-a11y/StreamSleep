@@ -52,6 +52,8 @@ class MainActivity : AppCompatActivity() {
 
         val timeLabels = timeOptions.map { if (it == 1) "1 minuta" else "$it minut" }
         spinnerTime.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, timeLabels)
+        // Domyślnie 30 minut (indeks 2)
+        spinnerTime.setSelection(2)
     }
 
     private fun setupButtons() {
@@ -97,6 +99,14 @@ class MainActivity : AppCompatActivity() {
         btnStop.isEnabled = isRunning
         if (!isRunning && tvStatus.text.startsWith("⏱")) {
             tvStatus.text = "Wybierz aplikację i czas"
+        }
+    }
+
+    private fun checkPermissions() {
+        if (!hasAccessibilityPermission()) {
+            showAccessibilityDialog()
+        } else if (!Settings.canDrawOverlays(this)) {
+            showOverlayDialog()
         }
     }
 

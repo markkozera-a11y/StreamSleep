@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background gradient circle -->
+    <path
+        android:fillColor="#0A0A1A"
+        android:pathData="M0,0h108v108H0z" />
+
+    <!-- Outer glow ring -->
+    <path
+        android:fillColor="#00C9B0"
+        android:fillAlpha="0.15"
+        android:pathData="M54,20 A34,34 0 1,1 53.99,20 z" />
+
+    <!-- Inner dark circle -->
+    <path
+        android:fillColor="#0D1117"
+        android:pathData="M54,24 A30,30 0 1,1 53.99,24 z" />
+
+    <!-- Music note - stem -->
+    <path
+        android:fillColor="#00E5CC"
+        android:pathData="M48,35 L48,58 C47,57 45.5,56.5 44,56.5 C41,56.5 38.5,58.5 38.5,61 C38.5,63.5 41,65.5 44,65.5 C47,65.5 49.5,63.5 49.5,61 L49.5,43 L62,40 L62,52 C61,51 59.5,50.5 58,50.5 C55,50.5 52.5,52.5 52.5,55 C52.5,57.5 55,59.5 58,59.5 C61,59.5 63.5,57.5 63.5,55 L63.5,38 L48,41 z" />
+
+    <!-- Download arrow -->
+    <path
+        android:fillColor="#00FF99"
+        android:pathData="M54,68 L54,80 M54,80 L49,75 M54,80 L59,75"
+        android:strokeWidth="2.5"
+        android:strokeColor="#00FF99"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Download base line -->
+    <path
+        android:pathData="M46,83 L62,83"
+        android:strokeWidth="2.5"
+        android:strokeColor="#00FF99"
+        android:strokeLineCap="round" />
+</vector>

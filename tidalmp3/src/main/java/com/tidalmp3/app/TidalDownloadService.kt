@@ -48,11 +48,12 @@ class TidalDownloadService : Service() {
         .readTimeout(120, TimeUnit.SECONDS)
         .followRedirects(true)
         .build()
-    private val tidalApi = TidalApiClient()
+    private lateinit var tidalApi: TidalApiClient
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        tidalApi = TidalApiClient(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -89,6 +90,7 @@ class TidalDownloadService : Service() {
         scope.launch {
             val outputDir = getOutputDir(playlistName)
             var successCount = 0
+            var errorCount = 0
             Log.d(TAG, "Rozpoczynam pobieranie ${trackIds.size} utworow, jakosc: $quality, folder: ${outputDir.absolutePath}")
 
             for (i in trackIds.indices) {
@@ -115,21 +117,27 @@ class TidalDownloadService : Service() {
                     sendProgressBroadcast(i + 1, trackIds.size, displayName, "track_done")
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
+                    errorCount++
                     Log.e(TAG, "Blad przy $displayName: ${e.message}", e)
                     sendProgressBroadcast(i + 1, trackIds.size, displayName, "error", e.message)
                 }
             }
 
             withContext(Dispatchers.Main) {
-                Log.d(TAG, "Pobieranie zakonczone: $successCount/${trackIds.size}")
-                sendProgressBroadcast(successCount, trackIds.size, "", "done")
+                Log.d(TAG, "Pobieranie zakonczone: $successCount/${trackIds.size}, bledy: $errorCount")
+                sendProgressBroadcast(successCount, trackIds.size, outputDir.absolutePath, "done")
                 isRunning = false
                 stopForeground(STOP_FOREGROUND_REMOVE)
 
                 val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                val text = if (errorCount > 0) {
+                    "Pobrano $successCount z ${trackIds.size} (bledy: $errorCount)"
+                } else {
+                    "Pobrano $successCount z ${trackIds.size} utworow"
+                }
                 val doneNotification = NotificationCompat.Builder(this@TidalDownloadService, CHANNEL_ID)
                     .setContentTitle("Pobieranie zakonczone")
-                    .setContentText("Pobrano $successCount z ${trackIds.size} utworow do: $playlistName/")
+                    .setContentText("$text → $playlistName/")
                     .setSmallIcon(android.R.drawable.stat_sys_download_done)
                     .setAutoCancel(true)
                     .build()
@@ -165,7 +173,6 @@ class TidalDownloadService : Service() {
                         output.write(buffer, 0, bytesRead)
                         totalBytesRead += bytesRead
 
-                        // Aktualizuj postep co 50KB
                         if (totalBytesRead - lastProgressUpdate > 50 * 1024) {
                             lastProgressUpdate = totalBytesRead
                             sendProgressBroadcast(

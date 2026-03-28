@@ -3,19 +3,21 @@ package com.tidalmp3.app
 import android.Manifest
 import android.content.*
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 
 class TidalDownloadActivity : AppCompatActivity() {
 
@@ -23,16 +25,18 @@ class TidalDownloadActivity : AppCompatActivity() {
     private lateinit var btnFetch: Button
     private lateinit var btnDownload: Button
     private lateinit var btnSelectAll: Button
+    private lateinit var btnLogin: Button
     private lateinit var spinnerQuality: Spinner
     private lateinit var tvPlaylistInfo: TextView
     private lateinit var tvOutputFolder: TextView
+    private lateinit var tvLoginStatus: TextView
     private lateinit var tvProgress: TextView
     private lateinit var tvProgressDetail: TextView
     private lateinit var progressBarTotal: ProgressBar
     private lateinit var progressBarFile: ProgressBar
     private lateinit var rvTracks: RecyclerView
 
-    private val tidalApi = TidalApiClient()
+    private lateinit var tidalApi: TidalApiClient
     private var tracks = listOf<TidalTrack>()
     private val selectedTrackIds = mutableSetOf<Int>()
     private var adapter: TrackAdapter? = null
@@ -61,6 +65,7 @@ class TidalDownloadActivity : AppCompatActivity() {
                 "downloading" -> {
                     progressBarTotal.visibility = View.VISIBLE
                     progressBarFile.visibility = View.VISIBLE
+                    progressBarTotal.isIndeterminate = false
                     progressBarTotal.max = total
                     progressBarTotal.progress = current - 1
                     tvProgress.text = "Pobieranie $current / $total: $trackName"
@@ -100,13 +105,17 @@ class TidalDownloadActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_tidal_download)
 
+        tidalApi = TidalApiClient(this)
+
         etPlaylistUrl = findViewById(R.id.etPlaylistUrl)
         btnFetch = findViewById(R.id.btnFetch)
         btnDownload = findViewById(R.id.btnDownload)
         btnSelectAll = findViewById(R.id.btnSelectAll)
+        btnLogin = findViewById(R.id.btnLogin)
         spinnerQuality = findViewById(R.id.spinnerQuality)
         tvPlaylistInfo = findViewById(R.id.tvPlaylistInfo)
         tvOutputFolder = findViewById(R.id.tvOutputFolder)
+        tvLoginStatus = findViewById(R.id.tvLoginStatus)
         tvProgress = findViewById(R.id.tvProgress)
         tvProgressDetail = findViewById(R.id.tvProgressDetail)
         progressBarTotal = findViewById(R.id.progressBarTotal)
@@ -119,15 +128,94 @@ class TidalDownloadActivity : AppCompatActivity() {
         btnFetch.setOnClickListener { fetchPlaylist() }
         btnDownload.setOnClickListener { startDownload() }
         btnSelectAll.setOnClickListener { toggleSelectAll() }
+        btnLogin.setOnClickListener { handleLoginClick() }
 
+        updateLoginUI()
         checkPermissions()
     }
 
     private fun setupQualitySpinner() {
         val labels = qualityOptions.map { it.label }
         spinnerQuality.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
-        // Domyslnie 320 kbps
-        spinnerQuality.setSelection(3)
+        spinnerQuality.setSelection(3) // 320 kbps
+    }
+
+    private fun updateLoginUI() {
+        if (tidalApi.isLoggedIn) {
+            tvLoginStatus.text = "Zalogowano do Tidal"
+            tvLoginStatus.setTextColor(0xFF00C9B0.toInt())
+            btnLogin.text = "WYLOGUJ"
+            btnFetch.isEnabled = true
+        } else {
+            tvLoginStatus.text = "Wymagane logowanie do Tidal"
+            tvLoginStatus.setTextColor(0xFFFF6666.toInt())
+            btnLogin.text = "ZALOGUJ DO TIDAL"
+            btnFetch.isEnabled = false
+        }
+    }
+
+    private fun handleLoginClick() {
+        if (tidalApi.isLoggedIn) {
+            tidalApi.logout()
+            updateLoginUI()
+            Toast.makeText(this, "Wylogowano", Toast.LENGTH_SHORT).show()
+        } else {
+            startDeviceLogin()
+        }
+    }
+
+    private fun startDeviceLogin() {
+        btnLogin.isEnabled = false
+        tvLoginStatus.text = "Laczenie..."
+
+        lifecycleScope.launch {
+            try {
+                val auth = tidalApi.startDeviceLogin()
+
+                // Pokaz dialog z kodem i linkiem
+                val dialog = AlertDialog.Builder(this@TidalDownloadActivity)
+                    .setTitle("Logowanie do Tidal")
+                    .setMessage("1. Otworz link w przegladarce:\n${auth.verificationUri}\n\n2. Wpisz kod:\n${auth.userCode}\n\n3. Zaloguj sie na konto Tidal\n\nCzekam na zatwierdzenie...")
+                    .setPositiveButton("OTWORZ LINK") { _, _ ->
+                        val uri = if (auth.verificationUriComplete.isNotBlank()) {
+                            auth.verificationUriComplete
+                        } else {
+                            auth.verificationUri
+                        }
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
+                    }
+                    .setNegativeButton("ANULUJ") { d, _ -> d.dismiss() }
+                    .setCancelable(false)
+                    .show()
+
+                // Polluj token w tle
+                tvLoginStatus.text = "Kod: ${auth.userCode} — czekam na zatwierdzenie..."
+                val interval = (auth.interval * 1000L).coerceAtLeast(5000L)
+                val maxAttempts = auth.expiresIn * 1000L / interval
+
+                for (attempt in 0..maxAttempts.toInt()) {
+                    delay(interval)
+                    try {
+                        val success = tidalApi.pollForToken(auth.deviceCode)
+                        if (success) {
+                            dialog.dismiss()
+                            updateLoginUI()
+                            Toast.makeText(this@TidalDownloadActivity, "Zalogowano!", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                    } catch (e: Exception) {
+                        // Kontynuuj polling
+                    }
+                }
+
+                dialog.dismiss()
+                tvLoginStatus.text = "Czas na logowanie minal - sprobuj ponownie"
+            } catch (e: Exception) {
+                tvLoginStatus.text = "Blad logowania: ${e.message}"
+            } finally {
+                btnLogin.isEnabled = true
+            }
+        }
     }
 
     override fun onResume() {
@@ -146,6 +234,11 @@ class TidalDownloadActivity : AppCompatActivity() {
     }
 
     private fun fetchPlaylist() {
+        if (!tidalApi.isLoggedIn) {
+            Toast.makeText(this, "Najpierw zaloguj sie do Tidal", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val url = etPlaylistUrl.text.toString().trim()
         val playlistId = tidalApi.parsePlaylistId(url)
         if (playlistId == null) {
@@ -161,6 +254,8 @@ class TidalDownloadActivity : AppCompatActivity() {
         rvTracks.adapter = null
         btnDownload.visibility = View.GONE
         btnSelectAll.visibility = View.GONE
+        tvProgress.text = ""
+        tvProgressDetail.visibility = View.GONE
 
         lifecycleScope.launch {
             try {
@@ -168,7 +263,6 @@ class TidalDownloadActivity : AppCompatActivity() {
                 playlistTitle = playlist.title
                 tvPlaylistInfo.text = "${playlist.title} (${playlist.numberOfTracks} utworow)"
 
-                // Pokaz folder docelowy
                 val outputPath = getOutputPath()
                 tvOutputFolder.text = "Folder: $outputPath"
                 tvOutputFolder.visibility = View.VISIBLE
@@ -203,6 +297,10 @@ class TidalDownloadActivity : AppCompatActivity() {
     }
 
     private fun startDownload() {
+        if (!tidalApi.isLoggedIn) {
+            Toast.makeText(this, "Najpierw zaloguj sie do Tidal", Toast.LENGTH_SHORT).show()
+            return
+        }
         if (selectedTrackIds.isEmpty()) {
             Toast.makeText(this, "Zaznacz utwory do pobrania", Toast.LENGTH_SHORT).show()
             return

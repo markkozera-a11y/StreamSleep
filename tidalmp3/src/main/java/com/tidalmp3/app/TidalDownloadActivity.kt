@@ -172,16 +172,19 @@ class TidalDownloadActivity : AppCompatActivity() {
             try {
                 val auth = tidalApi.startDeviceLogin()
 
-                // Pokaz dialog z kodem i linkiem
+                // Automatycznie otworz link w przegladarce
+                val uri = if (auth.verificationUriComplete.isNotBlank()) {
+                    auth.verificationUriComplete
+                } else {
+                    auth.verificationUri
+                }
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
+
+                // Pokaz dialog z kodem
                 val dialog = AlertDialog.Builder(this@TidalDownloadActivity)
                     .setTitle("Logowanie do Tidal")
-                    .setMessage("1. Otworz link w przegladarce:\n${auth.verificationUri}\n\n2. Wpisz kod:\n${auth.userCode}\n\n3. Zaloguj sie na konto Tidal\n\nCzekam na zatwierdzenie...")
-                    .setPositiveButton("OTWORZ LINK") { _, _ ->
-                        val uri = if (auth.verificationUriComplete.isNotBlank()) {
-                            auth.verificationUriComplete
-                        } else {
-                            auth.verificationUri
-                        }
+                    .setMessage("Strona logowania zostala otwarta w przegladarce.\n\nJesli pojawi sie pole na kod, wpisz:\n\n${auth.userCode}\n\nCzekam na zatwierdzenie...")
+                    .setNeutralButton("OTWORZ PONOWNIE") { _, _ ->
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
                     }
                     .setNegativeButton("ANULUJ") { d, _ -> d.dismiss() }

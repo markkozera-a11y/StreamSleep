@@ -21,7 +21,6 @@ class TidalApiClient(context: Context) {
         private const val AUTH_BASE = "https://auth.tidal.com/v1/oauth2"
         private const val CLIENT_ID = "zU4XHVVkc2tDPo4t"
         private const val CLIENT_SECRET = "VJKhDFqJPqvsPVNBV6ukXTJmwlvbttP7wlMlrc72se4="
-        private const val COUNTRY_CODE = "PL"
         private const val PREFS_NAME = "tidal_auth"
     }
 
@@ -30,7 +29,6 @@ class TidalApiClient(context: Context) {
             val req = chain.request().newBuilder()
                 .header("User-Agent", "TIDAL_ANDROID/2.82.0")
                 .header("Accept", "application/json")
-                .header("Accept-Encoding", "gzip")
                 .build()
             chain.proceed(req)
         }
@@ -49,6 +47,8 @@ class TidalApiClient(context: Context) {
     private var tokenExpiry: Long
         get() = prefs.getLong("token_expiry", 0)
         set(value) = prefs.edit().putLong("token_expiry", value).apply()
+
+    private var cachedCountryCode: String? = null
 
     val isLoggedIn: Boolean
         get() = accessToken != null
@@ -91,30 +91,38 @@ class TidalApiClient(context: Context) {
 
         return try {
             val json = executeRequest(request)
+            Log.d(TAG, "Token response: $json")
             val tokenResponse = gson.fromJson(json, TokenResponse::class.java)
             if (tokenResponse.accessToken != null) {
-                accessToken = tokenResponse.accessToken
-                refreshToken = tokenResponse.refreshToken
-                tokenExpiry = System.currentTimeMillis() + (tokenResponse.expiresIn * 1000L)
+                saveTokens(tokenResponse)
                 Log.d(TAG, "Zalogowano! Token wygasa za ${tokenResponse.expiresIn}s")
                 true
             } else {
                 false
             }
         } catch (e: IOException) {
-            if (e.message?.contains("400") == true || e.message?.contains("401") == true) {
-                false // Uzytkownik jeszcze nie zatwierdzil
+            val msg = e.message ?: ""
+            if (msg.contains("400") || msg.contains("401") || msg.contains("authorization_pending")) {
+                false
             } else {
                 throw e
             }
         }
     }
 
-    private suspend fun refreshTokenIfNeeded() {
-        val refresh = refreshToken ?: throw IOException("Brak refresh tokenu - zaloguj sie ponownie")
-        if (System.currentTimeMillis() < tokenExpiry - 60000) return // token wazny
+    private fun saveTokens(response: TokenResponse) {
+        accessToken = response.accessToken
+        if (response.refreshToken != null) {
+            refreshToken = response.refreshToken
+        }
+        tokenExpiry = System.currentTimeMillis() + (response.expiresIn * 1000L)
+        cachedCountryCode = null // Reset cache on new login
+    }
 
-        Log.d(TAG, "Odswiezanie tokenu...")
+    private suspend fun forceRefreshToken(): Boolean {
+        val refresh = refreshToken ?: return false
+        Log.d(TAG, "Wymuszam odswiezenie tokenu...")
+
         val body = "client_id=$CLIENT_ID&client_secret=$CLIENT_SECRET&refresh_token=$refresh&grant_type=refresh_token&scope=r_usr+w_usr+w_sub"
             .toRequestBody("application/x-www-form-urlencoded".toMediaType())
 
@@ -123,42 +131,69 @@ class TidalApiClient(context: Context) {
             .post(body)
             .build()
 
-        val json = executeRequest(request)
-        val tokenResponse = gson.fromJson(json, TokenResponse::class.java)
-        if (tokenResponse.accessToken != null) {
-            accessToken = tokenResponse.accessToken
-            if (tokenResponse.refreshToken != null) {
-                refreshToken = tokenResponse.refreshToken
+        return try {
+            val json = executeRequest(request)
+            Log.d(TAG, "Refresh response: $json")
+            val tokenResponse = gson.fromJson(json, TokenResponse::class.java)
+            if (tokenResponse.accessToken != null) {
+                saveTokens(tokenResponse)
+                true
+            } else {
+                false
             }
-            tokenExpiry = System.currentTimeMillis() + (tokenResponse.expiresIn * 1000L)
-        } else {
-            throw IOException("Nie udalo sie odswiezyc tokenu")
+        } catch (e: Exception) {
+            Log.e(TAG, "Refresh failed: ${e.message}")
+            false
         }
     }
 
     fun logout() {
         prefs.edit().clear().apply()
+        cachedCountryCode = null
     }
 
     private fun parseErrorMessage(code: Int, body: String): String {
-        // Probuj JSON error
         try {
             val obj = gson.fromJson(body, Map::class.java)
             val msg = obj["userMessage"] ?: obj["error_description"] ?: obj["error"] ?: obj["message"]
-            if (msg != null) return "HTTP $code: $msg"
+            if (msg != null) return "$msg"
         } catch (_: Exception) {}
 
-        // Jesli HTML (np. CloudFront 403)
         return when (code) {
             401 -> "Sesja wygasla - wyloguj sie i zaloguj ponownie"
             403 -> "Dostep zabroniony - sprawdz subskrypcje Tidal"
             404 -> "Nie znaleziono - sprawdz link do playlisty"
             429 -> "Za duzo zapytan - poczekaj chwile"
-            else -> "Blad serwera ($code) - sprobuj ponownie"
+            else -> "Blad serwera ($code)"
         }
     }
 
     // --- Tidal API ---
+
+    private suspend fun getCountryCode(): String {
+        cachedCountryCode?.let { return it }
+
+        val token = accessToken ?: return "PL"
+        try {
+            val request = Request.Builder()
+                .url("$API_BASE/sessions")
+                .header("Authorization", "Bearer $token")
+                .build()
+            val json = executeRawRequest(request)
+            if (json != null) {
+                val map = gson.fromJson(json, Map::class.java)
+                val cc = map["countryCode"] as? String
+                if (cc != null) {
+                    cachedCountryCode = cc
+                    Log.d(TAG, "Country code: $cc")
+                    return cc
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Nie mozna pobrac country code: ${e.message}")
+        }
+        return "PL"
+    }
 
     suspend fun getPlaylist(playlistId: String): TidalPlaylist {
         val cc = getCountryCode()
@@ -195,37 +230,68 @@ class TidalApiClient(context: Context) {
         return response.url
     }
 
-    suspend fun getCountryCode(): String {
-        refreshTokenIfNeeded()
-        val token = accessToken ?: return COUNTRY_CODE
-        try {
-            val request = Request.Builder()
-                .url("$API_BASE/sessions")
-                .header("Authorization", "Bearer $token")
-                .build()
-            val json = executeRequest(request)
-            val map = gson.fromJson(json, Map::class.java)
-            val cc = map["countryCode"] as? String
-            if (cc != null) {
-                Log.d(TAG, "Country code from session: $cc")
-                return cc
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Nie mozna pobrac country code: ${e.message}")
-        }
-        return COUNTRY_CODE
-    }
-
+    /**
+     * Wykonaj request z tokenem. Jesli 401, odswiez token i sprobuj ponownie.
+     * Jesli refresh tez sie nie uda, wyczysc sesje i rzuc blad.
+     */
     private suspend fun makeAuthRequest(url: String): String {
-        refreshTokenIfNeeded()
         val token = accessToken ?: throw IOException("Niezalogowany - zaloguj sie do Tidal")
 
+        // Proba 1: z aktualnym tokenem
         val request = Request.Builder()
             .url(url)
             .header("Authorization", "Bearer $token")
             .build()
 
-        return executeRequest(request)
+        val result = executeRawRequest(request)
+        if (result != null) return result
+
+        // Proba 2: odswiez token i sprobuj ponownie
+        Log.d(TAG, "Proba 1 nieudana (401), odswiezam token...")
+        val refreshed = forceRefreshToken()
+        if (!refreshed) {
+            // Refresh sie nie udal - wyczysc sesje
+            logout()
+            throw IOException("Sesja wygasla - zaloguj sie ponownie")
+        }
+
+        val newToken = accessToken ?: throw IOException("Brak tokenu po odswiezeniu")
+        val retryRequest = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $newToken")
+            .build()
+
+        return executeRequest(retryRequest)
+    }
+
+    /**
+     * Wykonaj request i zwroc body lub null jesli 401.
+     * Inne bledy rzucaja wyjatkiem.
+     */
+    private suspend fun executeRawRequest(request: Request): String? = suspendCoroutine { cont ->
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                cont.resumeWithException(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val body = it.body?.string() ?: ""
+                    when {
+                        it.isSuccessful -> cont.resume(body)
+                        it.code == 401 -> {
+                            Log.w(TAG, "401 for ${request.url}: $body")
+                            cont.resume(null) // Zwroc null, caller odswieza token
+                        }
+                        else -> {
+                            Log.e(TAG, "HTTP ${it.code} for ${request.url}: $body")
+                            val errorMsg = parseErrorMessage(it.code, body)
+                            cont.resumeWithException(IOException(errorMsg))
+                        }
+                    }
+                }
+            }
+        })
     }
 
     private suspend fun executeRequest(request: Request): String = suspendCoroutine { cont ->

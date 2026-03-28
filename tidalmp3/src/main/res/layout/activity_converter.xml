@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0A0A1A"
+    android:padding="20dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Audio → MP3"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#E0FFE0"
+            android:letterSpacing="0.03" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Konwertuj AAC / FLAC / M4A / WAV na MP3"
+            android:textSize="12sp"
+            android:textColor="#80B0A0"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
+
+    <!-- Quality selector -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="JAKOSC MP3"
+        android:textSize="11sp"
+        android:textColor="#609080"
+        android:letterSpacing="0.12"
+        android:layout_marginBottom="6dp" />
+
+    <Spinner
+        android:id="@+id/spinnerQuality"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@drawable/spinner_bg"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:popupBackground="#1A2A2A"
+        android:dropDownWidth="match_parent" />
+
+    <!-- Pick files button -->
+    <Button
+        android:id="@+id/btnPickFiles"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="WYBIERZ PLIKI AUDIO"
+        android:textSize="14sp"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#00C9B0"
+        android:stateListAnimator="@null"
+        android:layout_marginTop="12dp" />
+
+    <!-- File count -->
+    <TextView
+        android:id="@+id/tvFileCount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Brak plikow - kliknij WYBIERZ PLIKI"
+        android:textSize="13sp"
+        android:textColor="#C0DDC0"
+        android:gravity="center"
+        android:layout_marginTop="10dp" />
+
+    <!-- Output folder -->
+    <TextView
+        android:id="@+id/tvOutputFolder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="11sp"
+        android:textColor="#609080"
+        android:gravity="center"
+        android:layout_marginTop="2dp" />
+
+    <!-- Clear button -->
+    <Button
+        android:id="@+id/btnClear"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:text="WYCZYSC LISTE"
+        android:textSize="10sp"
+        android:textColor="#FF6666"
+        android:backgroundTint="#1A2A2A"
+        android:stateListAnimator="@null"
+        android:visibility="gone"
+        android:layout_gravity="end"
+        android:layout_marginTop="4dp" />
+
+    <!-- File list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvFiles"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="4dp"
+        android:clipToPadding="false"
+        android:paddingBottom="4dp" />
+
+    <!-- Progress section -->
+    <TextView
+        android:id="@+id/tvProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="12sp"
+        android:textColor="#C0DDC0"
+        android:gravity="center"
+        android:layout_marginTop="4dp" />
+
+    <ProgressBar
+        android:id="@+id/progressBarTotal"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:progressTint="#00C9B0"
+        android:progressBackgroundTint="#1A2A2A"
+        android:visibility="gone"
+        android:layout_marginTop="4dp" />
+
+    <ProgressBar
+        android:id="@+id/progressBarFile"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:progressTint="#00AA55"
+        android:progressBackgroundTint="#1A2A2A"
+        android:visibility="gone"
+        android:layout_marginTop="2dp" />
+
+    <TextView
+        android:id="@+id/tvProgressDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="10sp"
+        android:textColor="#609080"
+        android:gravity="center"
+        android:visibility="gone"
+        android:layout_marginTop="2dp" />
+
+    <!-- Convert button -->
+    <Button
+        android:id="@+id/btnConvert"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="KONWERTUJ NA MP3"
+        android:textSize="15sp"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#00AA55"
+        android:stateListAnimator="@null"
+        android:visibility="gone"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="4dp" />
+
+</LinearLayout>

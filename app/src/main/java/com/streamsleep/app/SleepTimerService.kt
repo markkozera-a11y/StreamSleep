@@ -67,7 +67,7 @@ class SleepTimerService : Service() {
                 overlayManager.hide()
                 closeStreamingApp(targetPackage)
                 // stopSelf po opóźnieniu, żeby AccessibilityService zdążył aktywować tryb Sen
-                Handler(Looper.getMainLooper()).postDelayed({ stopSelf() }, 8000)
+                Handler(Looper.getMainLooper()).postDelayed({ stopSelf() }, 15000)
             }
         }.start()
     }

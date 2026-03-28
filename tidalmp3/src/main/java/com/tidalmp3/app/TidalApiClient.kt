@@ -25,7 +25,16 @@ class TidalApiClient(context: Context) {
         private const val PREFS_NAME = "tidal_auth"
     }
 
-    private val client = OkHttpClient()
+    private val client = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            val req = chain.request().newBuilder()
+                .header("User-Agent", "TIDAL_ANDROID/2.82.0")
+                .header("Accept", "application/json")
+                .header("Accept-Encoding", "gzip")
+                .build()
+            chain.proceed(req)
+        }
+        .build()
     private val gson = Gson()
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -131,20 +140,40 @@ class TidalApiClient(context: Context) {
         prefs.edit().clear().apply()
     }
 
+    private fun parseErrorMessage(code: Int, body: String): String {
+        // Probuj JSON error
+        try {
+            val obj = gson.fromJson(body, Map::class.java)
+            val msg = obj["userMessage"] ?: obj["error_description"] ?: obj["error"] ?: obj["message"]
+            if (msg != null) return "HTTP $code: $msg"
+        } catch (_: Exception) {}
+
+        // Jesli HTML (np. CloudFront 403)
+        return when (code) {
+            401 -> "Sesja wygasla - wyloguj sie i zaloguj ponownie"
+            403 -> "Dostep zabroniony - sprawdz subskrypcje Tidal"
+            404 -> "Nie znaleziono - sprawdz link do playlisty"
+            429 -> "Za duzo zapytan - poczekaj chwile"
+            else -> "Blad serwera ($code) - sprobuj ponownie"
+        }
+    }
+
     // --- Tidal API ---
 
     suspend fun getPlaylist(playlistId: String): TidalPlaylist {
-        val json = makeAuthRequest("$API_BASE/playlists/$playlistId?countryCode=$COUNTRY_CODE")
+        val cc = getCountryCode()
+        val json = makeAuthRequest("$API_BASE/playlists/$playlistId?countryCode=$cc")
         return gson.fromJson(json, TidalPlaylist::class.java)
     }
 
     suspend fun getPlaylistTracks(playlistId: String): List<TidalTrack> {
+        val cc = getCountryCode()
         val tracks = mutableListOf<TidalTrack>()
         var offset = 0
         val limit = 100
 
         while (true) {
-            val url = "$API_BASE/playlists/$playlistId/tracks?countryCode=$COUNTRY_CODE&limit=$limit&offset=$offset"
+            val url = "$API_BASE/playlists/$playlistId/tracks?countryCode=$cc&limit=$limit&offset=$offset"
             val json = makeAuthRequest(url)
             val response = gson.fromJson(json, TidalTracksResponse::class.java)
             tracks.addAll(response.items)
@@ -155,7 +184,8 @@ class TidalApiClient(context: Context) {
     }
 
     suspend fun getStreamUrl(trackId: Int, quality: String = "HIGH"): String {
-        val url = "$API_BASE/tracks/$trackId/streamUrl?soundQuality=$quality&countryCode=$COUNTRY_CODE"
+        val cc = getCountryCode()
+        val url = "$API_BASE/tracks/$trackId/streamUrl?soundQuality=$quality&countryCode=$cc"
         val json = makeAuthRequest(url)
         Log.d(TAG, "Stream response for track $trackId: $json")
         val response = gson.fromJson(json, TidalStreamResponse::class.java)
@@ -165,6 +195,27 @@ class TidalApiClient(context: Context) {
         return response.url
     }
 
+    suspend fun getCountryCode(): String {
+        refreshTokenIfNeeded()
+        val token = accessToken ?: return COUNTRY_CODE
+        try {
+            val request = Request.Builder()
+                .url("$API_BASE/sessions")
+                .header("Authorization", "Bearer $token")
+                .build()
+            val json = executeRequest(request)
+            val map = gson.fromJson(json, Map::class.java)
+            val cc = map["countryCode"] as? String
+            if (cc != null) {
+                Log.d(TAG, "Country code from session: $cc")
+                return cc
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Nie mozna pobrac country code: ${e.message}")
+        }
+        return COUNTRY_CODE
+    }
+
     private suspend fun makeAuthRequest(url: String): String {
         refreshTokenIfNeeded()
         val token = accessToken ?: throw IOException("Niezalogowany - zaloguj sie do Tidal")
@@ -172,7 +223,6 @@ class TidalApiClient(context: Context) {
         val request = Request.Builder()
             .url(url)
             .header("Authorization", "Bearer $token")
-            .header("X-Tidal-Token", CLIENT_ID)
             .build()
 
         return executeRequest(request)
@@ -189,7 +239,8 @@ class TidalApiClient(context: Context) {
                     val body = it.body?.string() ?: ""
                     if (!it.isSuccessful) {
                         Log.e(TAG, "HTTP ${it.code} for ${request.url}: $body")
-                        cont.resumeWithException(IOException("HTTP ${it.code}: $body"))
+                        val errorMsg = parseErrorMessage(it.code, body)
+                        cont.resumeWithException(IOException(errorMsg))
                     } else {
                         cont.resume(body)
                     }

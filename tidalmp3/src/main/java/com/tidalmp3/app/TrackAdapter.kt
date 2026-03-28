@@ -1,4 +1,4 @@
-package com.streamsleep.app
+package com.tidalmp3.app
 
 import android.view.LayoutInflater
 import android.view.View

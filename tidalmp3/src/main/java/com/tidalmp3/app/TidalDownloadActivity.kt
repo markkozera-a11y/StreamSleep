@@ -1,10 +1,9 @@
-package com.streamsleep.app
+package com.tidalmp3.app
 
 import android.Manifest
 import android.content.*
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Environment
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -21,6 +20,7 @@ class TidalDownloadActivity : AppCompatActivity() {
     private lateinit var btnFetch: Button
     private lateinit var btnDownload: Button
     private lateinit var btnSelectAll: Button
+    private lateinit var spinnerQuality: Spinner
     private lateinit var tvPlaylistInfo: TextView
     private lateinit var tvProgress: TextView
     private lateinit var progressBar: ProgressBar
@@ -32,6 +32,15 @@ class TidalDownloadActivity : AppCompatActivity() {
     private var adapter: TrackAdapter? = null
     private var playlistTitle = ""
     private var allSelected = false
+
+    data class QualityOption(val label: String, val apiValue: String)
+
+    private val qualityOptions = listOf(
+        QualityOption("Normal (96 kbps)", "LOW"),
+        QualityOption("High (320 kbps)", "HIGH"),
+        QualityOption("HiFi (FLAC 1411 kbps)", "LOSSLESS"),
+        QualityOption("Master (MQA)", "HI_RES")
+    )
 
     private val progressReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -69,6 +78,7 @@ class TidalDownloadActivity : AppCompatActivity() {
         btnFetch = findViewById(R.id.btnFetch)
         btnDownload = findViewById(R.id.btnDownload)
         btnSelectAll = findViewById(R.id.btnSelectAll)
+        spinnerQuality = findViewById(R.id.spinnerQuality)
         tvPlaylistInfo = findViewById(R.id.tvPlaylistInfo)
         tvProgress = findViewById(R.id.tvProgress)
         progressBar = findViewById(R.id.progressBar)
@@ -76,11 +86,19 @@ class TidalDownloadActivity : AppCompatActivity() {
 
         rvTracks.layoutManager = LinearLayoutManager(this)
 
+        setupQualitySpinner()
         btnFetch.setOnClickListener { fetchPlaylist() }
         btnDownload.setOnClickListener { startDownload() }
         btnSelectAll.setOnClickListener { toggleSelectAll() }
 
         checkStoragePermission()
+    }
+
+    private fun setupQualitySpinner() {
+        val labels = qualityOptions.map { it.label }
+        spinnerQuality.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
+        // Domyslnie HIGH (320 kbps)
+        spinnerQuality.setSelection(1)
     }
 
     override fun onResume() {
@@ -155,6 +173,7 @@ class TidalDownloadActivity : AppCompatActivity() {
         val trackIds = selectedTracks.map { it.id }.toIntArray()
         val titles = selectedTracks.map { it.title }.toTypedArray()
         val artists = selectedTracks.map { it.artistName }.toTypedArray()
+        val quality = qualityOptions[spinnerQuality.selectedItemPosition].apiValue
 
         val intent = Intent(this, TidalDownloadService::class.java).apply {
             action = TidalDownloadService.ACTION_DOWNLOAD
@@ -162,6 +181,7 @@ class TidalDownloadActivity : AppCompatActivity() {
             putExtra(TidalDownloadService.EXTRA_TRACK_TITLES, titles)
             putExtra(TidalDownloadService.EXTRA_TRACK_ARTISTS, artists)
             putExtra(TidalDownloadService.EXTRA_PLAYLIST_NAME, playlistTitle)
+            putExtra(TidalDownloadService.EXTRA_QUALITY, quality)
         }
         startForegroundService(intent)
 

@@ -14,7 +14,7 @@
         android:id="@+id/cbSelect"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:buttonTint="#4A4AFF"
+        android:buttonTint="#00C9B0"
         android:checked="true" />
 
     <TextView
@@ -22,7 +22,7 @@
         android:layout_width="28dp"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:textColor="#555577"
+        android:textColor="#405050"
         android:gravity="center" />
 
     <LinearLayout
@@ -37,7 +37,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="14sp"
-            android:textColor="#E0E0FF"
+            android:textColor="#E0FFE0"
             android:maxLines="1"
             android:ellipsize="end" />
 
@@ -46,7 +46,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="11sp"
-            android:textColor="#7070AA"
+            android:textColor="#609080"
             android:maxLines="1"
             android:ellipsize="end" />
     </LinearLayout>
@@ -56,7 +56,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:textColor="#555577"
+        android:textColor="#405050"
         android:layout_marginStart="8dp" />
 
 </LinearLayout>

@@ -1,4 +1,4 @@
-package com.streamsleep.app
+package com.tidalmp3.app
 
 import android.app.*
 import android.content.Context
@@ -22,15 +22,16 @@ class TidalDownloadService : Service() {
         const val EXTRA_TRACK_TITLES = "EXTRA_TRACK_TITLES"
         const val EXTRA_TRACK_ARTISTS = "EXTRA_TRACK_ARTISTS"
         const val EXTRA_PLAYLIST_NAME = "EXTRA_PLAYLIST_NAME"
+        const val EXTRA_QUALITY = "EXTRA_QUALITY"
 
         const val CHANNEL_ID = "tidal_download_channel"
         const val NOTIFICATION_ID = 2
 
-        const val BROADCAST_PROGRESS = "com.streamsleep.app.DOWNLOAD_PROGRESS"
+        const val BROADCAST_PROGRESS = "com.tidalmp3.app.DOWNLOAD_PROGRESS"
         const val EXTRA_CURRENT = "EXTRA_CURRENT"
         const val EXTRA_TOTAL = "EXTRA_TOTAL"
         const val EXTRA_TRACK_NAME = "EXTRA_TRACK_NAME"
-        const val EXTRA_STATUS = "EXTRA_STATUS" // "downloading", "done", "error"
+        const val EXTRA_STATUS = "EXTRA_STATUS"
         const val EXTRA_ERROR_MSG = "EXTRA_ERROR_MSG"
 
         var isRunning = false
@@ -56,7 +57,8 @@ class TidalDownloadService : Service() {
                 val titles = intent.getStringArrayExtra(EXTRA_TRACK_TITLES) ?: return START_NOT_STICKY
                 val artists = intent.getStringArrayExtra(EXTRA_TRACK_ARTISTS) ?: return START_NOT_STICKY
                 val playlistName = intent.getStringExtra(EXTRA_PLAYLIST_NAME) ?: "Tidal"
-                startDownloads(trackIds, titles, artists, playlistName)
+                val quality = intent.getStringExtra(EXTRA_QUALITY) ?: "HIGH"
+                startDownloads(trackIds, titles, artists, playlistName, quality)
             }
             ACTION_CANCEL -> {
                 scope.coroutineContext.cancelChildren()
@@ -72,7 +74,8 @@ class TidalDownloadService : Service() {
         trackIds: IntArray,
         titles: Array<String>,
         artists: Array<String>,
-        playlistName: String
+        playlistName: String,
+        quality: String
     ) {
         isRunning = true
         val notification = buildNotification("Przygotowywanie...", 0, trackIds.size)
@@ -94,7 +97,7 @@ class TidalDownloadService : Service() {
                 updateNotification("${i + 1}/${trackIds.size}: $displayName", i, trackIds.size)
 
                 try {
-                    val streamUrl = tidalApi.getStreamUrl(trackId)
+                    val streamUrl = tidalApi.getStreamUrl(trackId, quality)
                     val fileName = sanitizeFileName("$artist - $title") + ".mp3"
                     val outputFile = File(outputDir, fileName)
 
@@ -111,7 +114,6 @@ class TidalDownloadService : Service() {
                 isRunning = false
                 stopForeground(STOP_FOREGROUND_REMOVE)
 
-                // Show completion notification
                 val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 val doneNotification = NotificationCompat.Builder(this@TidalDownloadService, CHANNEL_ID)
                     .setContentTitle("Pobieranie zakonczone")

@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#1A1A2E"
+    android:background="#0A0A1A"
     android:padding="20dp">
 
     <!-- Header -->
@@ -18,10 +18,10 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tidal → MP3"
-            android:textSize="24sp"
+            android:text="Tidal MP3"
+            android:textSize="26sp"
             android:textStyle="bold"
-            android:textColor="#E0E0FF"
+            android:textColor="#E0FFE0"
             android:letterSpacing="0.03" />
 
         <TextView
@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:text="Pobierz utwory z playlisty Tidal"
             android:textSize="12sp"
-            android:textColor="#9090BB"
+            android:textColor="#80B0A0"
             android:layout_marginTop="4dp" />
     </LinearLayout>
 
@@ -39,7 +39,7 @@
         android:layout_height="wrap_content"
         android:text="LINK DO PLAYLISTY"
         android:textSize="11sp"
-        android:textColor="#7070AA"
+        android:textColor="#609080"
         android:letterSpacing="0.12"
         android:layout_marginBottom="6dp" />
 
@@ -49,13 +49,34 @@
         android:layout_height="52dp"
         android:hint="https://tidal.com/browse/playlist/..."
         android:textSize="14sp"
-        android:textColor="#E0E0FF"
-        android:textColorHint="#555577"
+        android:textColor="#E0FFE0"
+        android:textColorHint="#405050"
         android:background="@drawable/spinner_bg"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:inputType="textUri"
         android:singleLine="true" />
+
+    <!-- Quality selector -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="JAKOSC AUDIO"
+        android:textSize="11sp"
+        android:textColor="#609080"
+        android:letterSpacing="0.12"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="6dp" />
+
+    <Spinner
+        android:id="@+id/spinnerQuality"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:background="@drawable/spinner_bg"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:popupBackground="#1A2A2A"
+        android:dropDownWidth="match_parent" />
 
     <Button
         android:id="@+id/btnFetch"
@@ -64,9 +85,9 @@
         android:text="POBIERZ LISTE UTWOROW"
         android:textSize="14sp"
         android:textColor="#FFFFFF"
-        android:backgroundTint="#4A4AFF"
+        android:backgroundTint="#00C9B0"
         android:stateListAnimator="@null"
-        android:layout_marginTop="12dp" />
+        android:layout_marginTop="14dp" />
 
     <!-- Playlist info -->
     <TextView
@@ -75,23 +96,23 @@
         android:layout_height="wrap_content"
         android:text=""
         android:textSize="14sp"
-        android:textColor="#C0C0DD"
+        android:textColor="#C0DDC0"
         android:gravity="center"
-        android:layout_marginTop="12dp" />
+        android:layout_marginTop="10dp" />
 
-    <!-- Select all / deselect -->
+    <!-- Select all -->
     <Button
         android:id="@+id/btnSelectAll"
         android:layout_width="wrap_content"
         android:layout_height="36dp"
         android:text="ZAZNACZ WSZYSTKIE"
         android:textSize="11sp"
-        android:textColor="#9090BB"
-        android:backgroundTint="#2A2A4E"
+        android:textColor="#80B0A0"
+        android:backgroundTint="#1A2A2A"
         android:stateListAnimator="@null"
         android:visibility="gone"
         android:layout_gravity="end"
-        android:layout_marginTop="8dp" />
+        android:layout_marginTop="6dp" />
 
     <!-- Track list -->
     <androidx.recyclerview.widget.RecyclerView
@@ -99,7 +120,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:clipToPadding="false"
         android:paddingBottom="8dp" />
 
@@ -109,8 +130,8 @@
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:progressTint="#4A4AFF"
-        android:progressBackgroundTint="#333355"
+        android:progressTint="#00C9B0"
+        android:progressBackgroundTint="#1A2A2A"
         android:visibility="gone"
         android:layout_marginTop="8dp" />
 
@@ -120,7 +141,7 @@
         android:layout_height="wrap_content"
         android:text=""
         android:textSize="12sp"
-        android:textColor="#9090CC"
+        android:textColor="#80B0A0"
         android:gravity="center"
         android:layout_marginTop="4dp" />
 
@@ -129,13 +150,13 @@
         android:id="@+id/btnDownload"
         android:layout_width="match_parent"
         android:layout_height="52dp"
-        android:text="POBIERZ ZAZNACZONE MP3"
+        android:text="POBIERZ ZAZNACZONE"
         android:textSize="15sp"
         android:textColor="#FFFFFF"
         android:backgroundTint="#00AA55"
         android:stateListAnimator="@null"
         android:visibility="gone"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="10dp"
         android:layout_marginBottom="8dp" />
 
 </LinearLayout>

@@ -1,4 +1,4 @@
-package com.streamsleep.app
+package com.tidalmp3.app
 
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
@@ -12,7 +12,6 @@ class TidalApiClient {
 
     companion object {
         private const val API_BASE = "https://api.tidal.com/v1"
-        // Public client token for read-only access
         private const val CLIENT_TOKEN = "CzET4vdadNUFQ5JU"
         private const val COUNTRY_CODE = "PL"
     }
@@ -21,10 +20,6 @@ class TidalApiClient {
     private val gson = Gson()
 
     fun parsePlaylistId(url: String): String? {
-        // Handles URLs like:
-        // https://tidal.com/browse/playlist/uuid
-        // https://listen.tidal.com/playlist/uuid
-        // or just the raw UUID
         val patterns = listOf(
             Regex("""tidal\.com/(?:browse/)?playlist/([a-f0-9-]+)"""),
             Regex("""^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$""")

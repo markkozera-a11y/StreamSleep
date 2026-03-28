@@ -122,18 +122,6 @@
         android:stateListAnimator="@null"
         android:layout_marginBottom="24dp" />
 
-    <!-- Tidal MP3 -->
-    <Button
-        android:id="@+id/btnTidal"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:text="🎵  TIDAL → MP3"
-        android:textSize="14sp"
-        android:textColor="#CCCCCC"
-        android:backgroundTint="#1DB954"
-        android:stateListAnimator="@null"
-        android:layout_marginBottom="12dp" />
-
     <!-- Informacja o wymaganiach -->
     <TextView
         android:layout_width="match_parent"

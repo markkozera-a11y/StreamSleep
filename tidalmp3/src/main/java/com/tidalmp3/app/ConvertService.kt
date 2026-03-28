@@ -8,12 +8,11 @@ import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.FFmpegKitConfig
-import com.arthenica.ffmpegkit.ReturnCode
-import com.arthenica.ffmpegkit.Statistics
+import com.arthenica.mobileffmpeg.Config
+import com.arthenica.mobileffmpeg.FFmpeg
 import kotlinx.coroutines.*
 import java.io.File
+import java.io.FileOutputStream
 
 class ConvertService : Service() {
 
@@ -56,7 +55,7 @@ class ConvertService : Service() {
                 startConversion(uriStrings, names, kbps)
             }
             ACTION_CANCEL -> {
-                FFmpegKit.cancel()
+                FFmpeg.cancel()
                 scope.coroutineContext.cancelChildren()
                 isRunning = false
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -84,13 +83,15 @@ class ConvertService : Service() {
                 val outputName = name.substringBeforeLast(".") + ".mp3"
                 val outputFile = File(outputDir, sanitizeFileName(outputName))
 
-                Log.d(TAG, "Konwersja ${i+1}/${uriStrings.size}: $name → $outputName ($kbps kbps)")
+                Log.d(TAG, "Konwersja ${i+1}/${uriStrings.size}: $name -> $outputName ($kbps kbps)")
                 sendProgressBroadcast(i + 1, uriStrings.size, name, "converting")
                 updateNotification("${i + 1}/${uriStrings.size}: $name", i, uriStrings.size)
 
                 try {
-                    val inputPath = getInputPath(uri)
-                    val success = convertFile(inputPath, outputFile.absolutePath, kbps, i + 1, uriStrings.size, name)
+                    // Copy content URI to temp file (mobile-ffmpeg needs file path)
+                    val tempInput = copyUriToTempFile(uri, name)
+                    val success = convertFile(tempInput.absolutePath, outputFile.absolutePath, kbps)
+                    tempInput.delete()
 
                     if (success) {
                         successCount++
@@ -131,34 +132,36 @@ class ConvertService : Service() {
         }
     }
 
-    private fun getInputPath(uri: Uri): String {
-        // FFmpegKit needs a path - register content URI as SAF input
-        return FFmpegKitConfig.getSafParameterForRead(this, uri)
+    private fun copyUriToTempFile(uri: Uri, name: String): File {
+        val ext = name.substringAfterLast(".", "tmp")
+        val tempFile = File(cacheDir, "input_${System.currentTimeMillis()}.$ext")
+        contentResolver.openInputStream(uri)?.use { input ->
+            FileOutputStream(tempFile).use { output ->
+                input.copyTo(output)
+            }
+        } ?: throw Exception("Nie mozna otworzyc pliku")
+        return tempFile
     }
 
-    private fun convertFile(
-        inputPath: String,
-        outputPath: String,
-        kbps: Int,
-        currentFile: Int,
-        totalFiles: Int,
-        displayName: String
-    ): Boolean {
-        // Delete existing output if any
+    private fun convertFile(inputPath: String, outputPath: String, kbps: Int): Boolean {
         File(outputPath).delete()
 
-        val cmd = "-i \"$inputPath\" -vn -acodec libmp3lame -ab ${kbps}k -ar 44100 -ac 2 -y \"$outputPath\""
-        Log.d(TAG, "FFmpeg: $cmd")
+        val cmd = arrayOf(
+            "-i", inputPath,
+            "-vn",
+            "-acodec", "libmp3lame",
+            "-ab", "${kbps}k",
+            "-ar", "44100",
+            "-ac", "2",
+            "-y", outputPath
+        )
+        Log.d(TAG, "FFmpeg: ${cmd.joinToString(" ")}")
 
-        val session = FFmpegKit.execute(cmd)
-
-        // Check result
-        val rc = session.returnCode
-        return if (ReturnCode.isSuccess(rc)) {
+        val rc = FFmpeg.execute(cmd)
+        return if (rc == Config.RETURN_CODE_SUCCESS) {
             true
         } else {
-            val logs = session.allLogsAsString
-            Log.e(TAG, "FFmpeg failed (rc=$rc): ${logs.takeLast(500)}")
+            Log.e(TAG, "FFmpeg failed (rc=$rc)")
             false
         }
     }
@@ -226,7 +229,7 @@ class ConvertService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        FFmpegKit.cancel()
+        FFmpeg.cancel()
         scope.cancel()
         isRunning = false
     }

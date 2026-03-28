@@ -4,21 +4,13 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:paddingTop="10dp"
-    android:paddingBottom="10dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp"
     android:paddingStart="4dp"
-    android:paddingEnd="8dp"
-    android:background="?attr/selectableItemBackground">
-
-    <CheckBox
-        android:id="@+id/cbSelect"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:buttonTint="#00C9B0"
-        android:checked="true" />
+    android:paddingEnd="4dp">
 
     <TextView
-        android:id="@+id/tvTrackNumber"
+        android:id="@+id/tvFileNumber"
         android:layout_width="28dp"
         android:layout_height="wrap_content"
         android:textSize="12sp"
@@ -33,16 +25,16 @@
         android:layout_marginStart="8dp">
 
         <TextView
-            android:id="@+id/tvTrackTitle"
+            android:id="@+id/tvFileName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textColor="#E0FFE0"
             android:maxLines="1"
             android:ellipsize="end" />
 
         <TextView
-            android:id="@+id/tvTrackArtist"
+            android:id="@+id/tvFileInfo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="11sp"
@@ -51,12 +43,13 @@
             android:ellipsize="end" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tvTrackDuration"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="12sp"
-        android:textColor="#405050"
-        android:layout_marginStart="8dp" />
+    <ImageButton
+        android:id="@+id/btnRemove"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Usun"
+        android:layout_marginStart="4dp" />
 
 </LinearLayout>

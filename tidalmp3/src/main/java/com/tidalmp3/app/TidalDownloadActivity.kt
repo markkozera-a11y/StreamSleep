@@ -142,7 +142,7 @@ class TidalDownloadActivity : AppCompatActivity() {
 
     private fun updateLoginUI() {
         if (tidalApi.isLoggedIn) {
-            tvLoginStatus.text = "Zalogowano do Tidal"
+            tvLoginStatus.text = tidalApi.loginStatus
             tvLoginStatus.setTextColor(0xFF00C9B0.toInt())
             btnLogin.text = "WYLOGUJ"
             btnFetch.isEnabled = true

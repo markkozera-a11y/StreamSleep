@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1A1A2E"
+    android:padding="20dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingTop="16dp"
+        android:paddingBottom="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tidal → MP3"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#E0E0FF"
+            android:letterSpacing="0.03" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pobierz utwory z playlisty Tidal"
+            android:textSize="12sp"
+            android:textColor="#9090BB"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
+
+    <!-- URL Input -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="LINK DO PLAYLISTY"
+        android:textSize="11sp"
+        android:textColor="#7070AA"
+        android:letterSpacing="0.12"
+        android:layout_marginBottom="6dp" />
+
+    <EditText
+        android:id="@+id/etPlaylistUrl"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:hint="https://tidal.com/browse/playlist/..."
+        android:textSize="14sp"
+        android:textColor="#E0E0FF"
+        android:textColorHint="#555577"
+        android:background="@drawable/spinner_bg"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:inputType="textUri"
+        android:singleLine="true" />
+
+    <Button
+        android:id="@+id/btnFetch"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="POBIERZ LISTE UTWOROW"
+        android:textSize="14sp"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#4A4AFF"
+        android:stateListAnimator="@null"
+        android:layout_marginTop="12dp" />
+
+    <!-- Playlist info -->
+    <TextView
+        android:id="@+id/tvPlaylistInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="14sp"
+        android:textColor="#C0C0DD"
+        android:gravity="center"
+        android:layout_marginTop="12dp" />
+
+    <!-- Select all / deselect -->
+    <Button
+        android:id="@+id/btnSelectAll"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:text="ZAZNACZ WSZYSTKIE"
+        android:textSize="11sp"
+        android:textColor="#9090BB"
+        android:backgroundTint="#2A2A4E"
+        android:stateListAnimator="@null"
+        android:visibility="gone"
+        android:layout_gravity="end"
+        android:layout_marginTop="8dp" />
+
+    <!-- Track list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvTracks"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
+
+    <!-- Progress -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:progressTint="#4A4AFF"
+        android:progressBackgroundTint="#333355"
+        android:visibility="gone"
+        android:layout_marginTop="8dp" />
+
+    <TextView
+        android:id="@+id/tvProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="12sp"
+        android:textColor="#9090CC"
+        android:gravity="center"
+        android:layout_marginTop="4dp" />
+
+    <!-- Download button -->
+    <Button
+        android:id="@+id/btnDownload"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="POBIERZ ZAZNACZONE MP3"
+        android:textSize="15sp"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#00AA55"
+        android:stateListAnimator="@null"
+        android:visibility="gone"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp" />
+
+</LinearLayout>

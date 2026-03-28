@@ -17,6 +17,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
     private lateinit var tvStatus: TextView
+    private lateinit var btnTidal: Button
 
     private val streamingApps = listOf(
         StreamingApp("Netflix", "com.netflix.mediaclient"),
@@ -36,9 +37,15 @@ class MainActivity : AppCompatActivity() {
         btnStop = findViewById(R.id.btnStop)
         tvStatus = findViewById(R.id.tvStatus)
 
+        btnTidal = findViewById(R.id.btnTidal)
+
         setupSpinners()
         setupButtons()
         checkPermissions()
+
+        btnTidal.setOnClickListener {
+            startActivity(Intent(this, TidalDownloadActivity::class.java))
+        }
     }
 
     override fun onResume() {

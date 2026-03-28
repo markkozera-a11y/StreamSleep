@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Environment
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
@@ -16,6 +17,8 @@ import java.util.concurrent.TimeUnit
 class TidalDownloadService : Service() {
 
     companion object {
+        const val TAG = "TidalDownload"
+
         const val ACTION_DOWNLOAD = "ACTION_DOWNLOAD"
         const val ACTION_CANCEL = "ACTION_CANCEL"
         const val EXTRA_TRACK_IDS = "EXTRA_TRACK_IDS"
@@ -33,6 +36,8 @@ class TidalDownloadService : Service() {
         const val EXTRA_TRACK_NAME = "EXTRA_TRACK_NAME"
         const val EXTRA_STATUS = "EXTRA_STATUS"
         const val EXTRA_ERROR_MSG = "EXTRA_ERROR_MSG"
+        const val EXTRA_BYTES_DOWNLOADED = "EXTRA_BYTES_DOWNLOADED"
+        const val EXTRA_BYTES_TOTAL = "EXTRA_BYTES_TOTAL"
 
         var isRunning = false
     }
@@ -40,7 +45,7 @@ class TidalDownloadService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
         .followRedirects(true)
         .build()
     private val tidalApi = TidalApiClient()
@@ -84,6 +89,7 @@ class TidalDownloadService : Service() {
         scope.launch {
             val outputDir = getOutputDir(playlistName)
             var successCount = 0
+            Log.d(TAG, "Rozpoczynam pobieranie ${trackIds.size} utworow, jakosc: $quality, folder: ${outputDir.absolutePath}")
 
             for (i in trackIds.indices) {
                 if (!isActive) break
@@ -93,23 +99,29 @@ class TidalDownloadService : Service() {
                 val artist = artists[i]
                 val displayName = "$artist - $title"
 
+                Log.d(TAG, "Pobieram ${i+1}/${trackIds.size}: $displayName (ID: $trackId)")
                 sendProgressBroadcast(i + 1, trackIds.size, displayName, "downloading")
                 updateNotification("${i + 1}/${trackIds.size}: $displayName", i, trackIds.size)
 
                 try {
                     val streamUrl = tidalApi.getStreamUrl(trackId, quality)
+                    Log.d(TAG, "URL streamu: ${streamUrl.take(80)}...")
                     val fileName = sanitizeFileName("$artist - $title") + ".mp3"
                     val outputFile = File(outputDir, fileName)
 
-                    downloadFile(streamUrl, outputFile)
+                    downloadFileWithProgress(streamUrl, outputFile, i + 1, trackIds.size, displayName)
                     successCount++
+                    Log.d(TAG, "Pobrano: $fileName (${outputFile.length()} bajtow)")
+                    sendProgressBroadcast(i + 1, trackIds.size, displayName, "track_done")
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
+                    Log.e(TAG, "Blad przy $displayName: ${e.message}", e)
                     sendProgressBroadcast(i + 1, trackIds.size, displayName, "error", e.message)
                 }
             }
 
             withContext(Dispatchers.Main) {
+                Log.d(TAG, "Pobieranie zakonczone: $successCount/${trackIds.size}")
                 sendProgressBroadcast(successCount, trackIds.size, "", "done")
                 isRunning = false
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -127,17 +139,47 @@ class TidalDownloadService : Service() {
         }
     }
 
-    private fun downloadFile(url: String, outputFile: File) {
+    private fun downloadFileWithProgress(
+        url: String,
+        outputFile: File,
+        currentTrack: Int,
+        totalTracks: Int,
+        displayName: String
+    ) {
         val request = Request.Builder().url(url).build()
         httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                throw Exception("HTTP ${response.code}")
+                throw Exception("HTTP ${response.code}: ${response.message}")
             }
-            response.body?.byteStream()?.use { input ->
+            val body = response.body ?: throw Exception("Pusta odpowiedz")
+            val contentLength = body.contentLength()
+
+            body.byteStream().use { input ->
                 FileOutputStream(outputFile).use { output ->
-                    input.copyTo(output, bufferSize = 8192)
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var totalBytesRead = 0L
+                    var lastProgressUpdate = 0L
+
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        totalBytesRead += bytesRead
+
+                        // Aktualizuj postep co 50KB
+                        if (totalBytesRead - lastProgressUpdate > 50 * 1024) {
+                            lastProgressUpdate = totalBytesRead
+                            sendProgressBroadcast(
+                                currentTrack, totalTracks, displayName, "downloading",
+                                bytesDownloaded = totalBytesRead, bytesTotal = contentLength
+                            )
+                            updateNotification(
+                                "$currentTrack/$totalTracks: $displayName (${formatBytes(totalBytesRead)})",
+                                currentTrack - 1, totalTracks
+                            )
+                        }
+                    }
                 }
-            } ?: throw Exception("Pusta odpowiedz")
+            }
         }
     }
 
@@ -152,12 +194,31 @@ class TidalDownloadService : Service() {
         return name.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()
     }
 
-    private fun sendProgressBroadcast(current: Int, total: Int, trackName: String, status: String, errorMsg: String? = null) {
+    private fun formatBytes(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> "%.1f KB".format(bytes / 1024.0)
+            else -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+        }
+    }
+
+    private fun sendProgressBroadcast(
+        current: Int,
+        total: Int,
+        trackName: String,
+        status: String,
+        errorMsg: String? = null,
+        bytesDownloaded: Long = 0,
+        bytesTotal: Long = 0
+    ) {
         val intent = Intent(BROADCAST_PROGRESS).apply {
+            setPackage(packageName)
             putExtra(EXTRA_CURRENT, current)
             putExtra(EXTRA_TOTAL, total)
             putExtra(EXTRA_TRACK_NAME, trackName)
             putExtra(EXTRA_STATUS, status)
+            putExtra(EXTRA_BYTES_DOWNLOADED, bytesDownloaded)
+            putExtra(EXTRA_BYTES_TOTAL, bytesTotal)
             errorMsg?.let { putExtra(EXTRA_ERROR_MSG, it) }
         }
         sendBroadcast(intent)
@@ -173,7 +234,7 @@ class TidalDownloadService : Service() {
             .setContentText(text)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setOngoing(true)
-            .setProgress(total, current, false)
+            .setProgress(total, current, current == 0 && total == 0)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Anuluj", cancelPendingIntent)
             .build()
     }
